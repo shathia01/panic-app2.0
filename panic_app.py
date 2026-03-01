@@ -193,44 +193,60 @@ def send_email_to_all(lat, lon, contacts):
     return results
 
 # ---------- SIDEBAR: MANAGE CONTACTS ----------
-st.sidebar.header("📋 Emergency Contacts")
-st.sidebar.caption("Default contacts:")
-for c in DEFAULT_CONTACTS:
-    st.sidebar.write(f"✅ {c['name']} — {c['email']}")
+ADMIN_PASSWORD = "admin123"   # ← change this to your own password
 
-st.sidebar.divider()
+st.sidebar.header("📋 Emergency Contacts")
 
 # Load saved contacts from file on first run only
 if "extra_contacts" not in st.session_state:
     st.session_state.extra_contacts = load_saved_contacts()
 
-st.sidebar.caption("Saved contacts:")
+total = len(DEFAULT_CONTACTS) + len(st.session_state.extra_contacts)
+st.sidebar.success(f"✅ {total} contact(s) saved — details hidden for privacy.")
 
-with st.sidebar.form("add_contact_form", clear_on_submit=True):
-    new_name = st.text_input("Name", placeholder="e.g. Sister")
-    new_email = st.text_input("Email", placeholder="e.g. sister@gmail.com")
-    add_btn = st.form_submit_button("➕ Add & Save Contact")
-    if add_btn:
-        if new_name and new_email:
-            st.session_state.extra_contacts.append({
-                "name": new_name,
-                "email": new_email
-            })
-            save_contacts_to_file(st.session_state.extra_contacts)
-            st.success(f"✅ {new_name} saved permanently!")
+st.sidebar.divider()
+
+# Password-protected admin panel to add/remove contacts
+with st.sidebar.expander("🔒 Manage Contacts (Admin Only)"):
+    pwd = st.text_input("Enter admin password", type="password", key="admin_pwd")
+
+    if pwd == ADMIN_PASSWORD:
+        st.caption("Default contacts (fixed):")
+        for c in DEFAULT_CONTACTS:
+            st.write(f"✅ {c['name']} — {c['email']}")
+
+        st.divider()
+        st.caption("Saved extra contacts:")
+
+        if st.session_state.extra_contacts:
+            for i, c in enumerate(st.session_state.extra_contacts):
+                col1, col2 = st.columns([3, 1])
+                col1.write(f"➕ {c['name']} — {c['email']}")
+                if col2.button("🗑️", key=f"del_{i}"):
+                    st.session_state.extra_contacts.pop(i)
+                    save_contacts_to_file(st.session_state.extra_contacts)
+                    st.rerun()
         else:
-            st.warning("Please fill in both fields.")
+            st.info("No extra contacts saved yet.")
 
-if st.session_state.extra_contacts:
-    for i, c in enumerate(st.session_state.extra_contacts):
-        col1, col2 = st.sidebar.columns([3, 1])
-        col1.write(f"➕ {c['name']} — {c['email']}")
-        if col2.button("🗑️", key=f"del_{i}"):
-            st.session_state.extra_contacts.pop(i)
-            save_contacts_to_file(st.session_state.extra_contacts)
-            st.rerun()
-else:
-    st.sidebar.info("No extra contacts saved yet.")
+        st.divider()
+        st.caption("Add new contact:")
+        with st.form("add_contact_form", clear_on_submit=True):
+            new_name = st.text_input("Name", placeholder="e.g. Sister")
+            new_email = st.text_input("Email", placeholder="e.g. sister@gmail.com")
+            add_btn = st.form_submit_button("➕ Add & Save Contact")
+            if add_btn:
+                if new_name and new_email:
+                    st.session_state.extra_contacts.append({
+                        "name": new_name,
+                        "email": new_email
+                    })
+                    save_contacts_to_file(st.session_state.extra_contacts)
+                    st.success(f"✅ {new_name} saved!")
+                else:
+                    st.warning("Please fill in both fields.")
+    elif pwd != "":
+        st.error("❌ Incorrect password.")
 
 # ---------- PANIC BUTTON ----------
 st.divider()
@@ -267,6 +283,4 @@ if st.button("🚨 PANIC", use_container_width=True, type="primary"):
             st.error("No police station found in the area.")
 
     else:
-
         st.error("⚠️ Location not available — refresh the page and allow location permission.")
-
