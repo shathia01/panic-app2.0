@@ -20,7 +20,7 @@ SENDER_NAME = "Emergency Alert"
 
 # ---------- DEFAULT HARDCODED CONTACTS ----------
 DEFAULT_CONTACTS = [
-    {"name": "Mum", "email": "shathia190304@gmail.com"},
+    {"name": "Admin", "email": "shathia190304@gmail.com"},
 ]
 
 # ---------- PERSISTENT CONTACTS FILE ----------
@@ -269,3 +269,4 @@ if st.button("🚨 PANIC", use_container_width=True, type="primary"):
     else:
 
         st.error("⚠️ Location not available — refresh the page and allow location permission.")
+
