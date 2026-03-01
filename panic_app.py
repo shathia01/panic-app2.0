@@ -2,45 +2,21 @@ import streamlit as st
 import requests
 import math
 import smtplib
-import uuid
-import json
-import os
-from datetime import datetime
+import email.utils
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.utils import formatdate, make_msgid
 from streamlit_js_eval import streamlit_js_eval
 
 st.title("🚨 One-Click Emergency Panic Button")
 
 # ---------- GMAIL CONFIG ----------
-SENDER_EMAIL = "shathia190304@gmail.com"
-SENDER_APP_PASSWORD = "kvskirvfdhsscege"
-SENDER_NAME = "Emergency Alert"
+SENDER_EMAIL = "shathia190304@gmail.com"       # your Gmail address
+SENDER_APP_PASSWORD = "kvskirvfdhsscege"       # 16-char app password (no spaces)
 
 # ---------- DEFAULT HARDCODED CONTACTS ----------
 DEFAULT_CONTACTS = [
     {"name": "Admin", "email": "shathia190304@gmail.com"},
 ]
-
-# ---------- PERSISTENT CONTACTS FILE ----------
-CONTACTS_FILE = "saved_contacts.json"
-
-def load_saved_contacts():
-    if os.path.exists(CONTACTS_FILE):
-        try:
-            with open(CONTACTS_FILE, "r") as f:
-                return json.load(f)
-        except Exception:
-            return []
-    return []
-
-def save_contacts_to_file(contacts):
-    try:
-        with open(CONTACTS_FILE, "w") as f:
-            json.dump(contacts, f, indent=2)
-    except Exception as e:
-        st.error(f"Failed to save contacts: {e}")
 
 # ---------- GET LOCATION ----------
 location = streamlit_js_eval(
@@ -102,58 +78,56 @@ def find_police(lat, lon, radius=5000):
 # ---------- SEND EMAIL ----------
 def send_email(recipient_name, recipient_email, lat, lon):
     maps_link = f"https://maps.google.com/?q={lat},{lon}"
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    plain_body = f"""Emergency Alert — Please Read Immediately
+    # Plain-text version (critical for avoiding spam filters)
+    plain_body = f"""Dear {recipient_name},
 
-Dear {recipient_name},
+I need your help urgently. This is an automated alert from my Emergency Panic Button app.
 
-This is an automated emergency alert sent from the Emergency Panic Button app.
+Please try to contact me or call emergency services (999) immediately.
 
-Someone needs your help right now. Please contact them or call emergency services (999) immediately.
+My current location:
+Latitude: {lat:.6f}
+Longitude: {lon:.6f}
 
-Their current location:
-  Latitude:  {lat:.6f}
-  Longitude: {lon:.6f}
-  Google Maps: {maps_link}
+View on Google Maps: {maps_link}
 
-Time sent: {timestamp}
-
----
-This message was sent automatically via Emergency Panic Button App.
-If you believe this was sent in error, please disregard.
+-- Sent automatically via Emergency Panic Button App
 """
 
+    # Clean HTML version (less aggressive styling to avoid spam triggers)
     html_body = f"""
     <html>
     <body style="font-family: Arial, sans-serif; background-color: #f8f8f8; padding: 20px;">
         <div style="max-width: 500px; margin: auto; background: white; border-radius: 10px;
-                    border-top: 6px solid red; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            <h1 style="color: red; text-align: center;">Emergency Alert</h1>
+                    border-top: 6px solid #cc0000; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+            <h2 style="color: #cc0000; text-align: center;">Emergency Alert</h2>
+
             <p style="font-size: 16px;">Dear <b>{recipient_name}</b>,</p>
+
             <p style="font-size: 16px;">
-                This is an automated emergency alert sent from the Emergency Panic Button app.<br><br>
-                <b>Someone needs your help immediately.</b><br>
-                Please contact them or call emergency services (<b>999</b>) right away.
+                I need your help urgently. Please contact me or call <b>999</b> right away.
             </p>
-            <div style="background-color: #fff3f3; border-left: 4px solid red;
+
+            <div style="background-color: #fff3f3; border-left: 4px solid #cc0000;
                         padding: 15px; border-radius: 5px; margin: 20px 0;">
                 <p style="margin: 0; font-size: 15px;">
-                    📍 <b>Live Location:</b><br>
-                    Latitude: <code>{lat:.6f}</code><br>
-                    Longitude: <code>{lon:.6f}</code><br>
-                    <small style="color:#888;">Sent at: {timestamp}</small>
+                    <b>My Location:</b><br>
+                    Latitude: {lat:.6f}<br>
+                    Longitude: {lon:.6f}
                 </p>
             </div>
+
             <a href="{maps_link}" style="display: block; text-align: center;
-               background-color: #c0392b; color: white; padding: 14px 20px;
+               background-color: #cc0000; color: white; padding: 14px 20px;
                border-radius: 8px; text-decoration: none; font-size: 16px;
                font-weight: bold; margin-top: 10px;">
-               View Location on Google Maps
+               View My Location on Google Maps
             </a>
+
             <p style="font-size: 12px; color: #999; text-align: center; margin-top: 20px;">
-                This alert was sent automatically via Emergency Panic Button App.<br>
-                If you believe this was sent in error, please disregard this message.
+                Sent automatically via Emergency Panic Button App.
             </p>
         </div>
     </body>
@@ -162,13 +136,14 @@ If you believe this was sent in error, please disregard.
 
     try:
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = "Emergency Alert - Urgent Assistance Required"
-        msg["From"] = f"{SENDER_NAME} <{SENDER_EMAIL}>"
+        msg["Subject"] = "Emergency Alert - I Need Help"
+        msg["From"] = f"Emergency Alert <{SENDER_EMAIL}>"
         msg["To"] = recipient_email
         msg["Reply-To"] = SENDER_EMAIL
-        msg["Date"] = formatdate(localtime=True)
-        msg["Message-ID"] = make_msgid(domain="gmail.com")
+        msg["Date"] = email.utils.formatdate(localtime=True)
+        msg["Message-ID"] = email.utils.make_msgid(domain="gmail.com")
 
+        # Plain text MUST come first, HTML second (RFC standard)
         msg.attach(MIMEText(plain_body, "plain"))
         msg.attach(MIMEText(html_body, "html"))
 
@@ -193,60 +168,39 @@ def send_email_to_all(lat, lon, contacts):
     return results
 
 # ---------- SIDEBAR: MANAGE CONTACTS ----------
-ADMIN_PASSWORD = "admin123"   # ← change this to your own password
-
 st.sidebar.header("📋 Emergency Contacts")
-
-# Load saved contacts from file on first run only
-if "extra_contacts" not in st.session_state:
-    st.session_state.extra_contacts = load_saved_contacts()
-
-total = len(DEFAULT_CONTACTS) + len(st.session_state.extra_contacts)
-st.sidebar.success(f"✅ {total} contact(s) saved — details hidden for privacy.")
+st.sidebar.caption("Default contacts:")
+for c in DEFAULT_CONTACTS:
+    st.sidebar.write(f"✅ {c['name']} — {c['email']}")
 
 st.sidebar.divider()
+st.sidebar.caption("Add extra contacts for this session:")
 
-# Password-protected admin panel to add/remove contacts
-with st.sidebar.expander("🔒 Manage Contacts (Admin Only)"):
-    pwd = st.text_input("Enter admin password", type="password", key="admin_pwd")
+if "extra_contacts" not in st.session_state:
+    st.session_state.extra_contacts = []
 
-    if pwd == ADMIN_PASSWORD:
-        st.caption("Default contacts (fixed):")
-        for c in DEFAULT_CONTACTS:
-            st.write(f"✅ {c['name']} — {c['email']}")
-
-        st.divider()
-        st.caption("Saved extra contacts:")
-
-        if st.session_state.extra_contacts:
-            for i, c in enumerate(st.session_state.extra_contacts):
-                col1, col2 = st.columns([3, 1])
-                col1.write(f"➕ {c['name']} — {c['email']}")
-                if col2.button("🗑️", key=f"del_{i}"):
-                    st.session_state.extra_contacts.pop(i)
-                    save_contacts_to_file(st.session_state.extra_contacts)
-                    st.rerun()
+with st.sidebar.form("add_contact_form", clear_on_submit=True):
+    new_name = st.text_input("Name", placeholder="e.g. Sister")
+    new_email = st.text_input("Email", placeholder="e.g. sister@gmail.com")
+    add_btn = st.form_submit_button("➕ Add Contact")
+    if add_btn:
+        if new_name and new_email:
+            st.session_state.extra_contacts.append({
+                "name": new_name,
+                "email": new_email
+            })
+            st.success(f"{new_name} added!")
         else:
-            st.info("No extra contacts saved yet.")
+            st.warning("Please fill in both fields.")
 
-        st.divider()
-        st.caption("Add new contact:")
-        with st.form("add_contact_form", clear_on_submit=True):
-            new_name = st.text_input("Name", placeholder="e.g. Sister")
-            new_email = st.text_input("Email", placeholder="e.g. sister@gmail.com")
-            add_btn = st.form_submit_button("➕ Add & Save Contact")
-            if add_btn:
-                if new_name and new_email:
-                    st.session_state.extra_contacts.append({
-                        "name": new_name,
-                        "email": new_email
-                    })
-                    save_contacts_to_file(st.session_state.extra_contacts)
-                    st.success(f"✅ {new_name} saved!")
-                else:
-                    st.warning("Please fill in both fields.")
-    elif pwd != "":
-        st.error("❌ Incorrect password.")
+if st.session_state.extra_contacts:
+    st.sidebar.caption("Added this session:")
+    for i, c in enumerate(st.session_state.extra_contacts):
+        col1, col2 = st.sidebar.columns([3, 1])
+        col1.write(f"➕ {c['name']} — {c['email']}")
+        if col2.button("🗑️", key=f"del_{i}"):
+            st.session_state.extra_contacts.pop(i)
+            st.rerun()
 
 # ---------- PANIC BUTTON ----------
 st.divider()
@@ -258,6 +212,7 @@ if st.button("🚨 PANIC", use_container_width=True, type="primary"):
         lat, lon = location
         st.success(f"📍 Location detected: {lat:.5f}, {lon:.5f}")
 
+        # --- Send Emails ---
         st.info("📤 Sending emergency emails...")
         results = send_email_to_all(lat, lon, all_contacts)
 
@@ -267,6 +222,7 @@ if st.button("🚨 PANIC", use_container_width=True, type="primary"):
             else:
                 st.error(f"❌ Failed to send to {r['name']} — {r['error']}")
 
+        # --- Find Police ---
         with st.spinner("🔍 Locating nearest police station..."):
             police = find_police(lat, lon, radius=5000)
 
