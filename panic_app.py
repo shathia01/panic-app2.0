@@ -45,6 +45,19 @@ if raw and raw != "null":
     except Exception:
         my_contacts = []
 
+# ---------- GET LOCATION ----------
+location = streamlit_js_eval(
+    js_expressions="""
+    new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+            pos => resolve([pos.coords.latitude, pos.coords.longitude]),
+            err => resolve(null)
+        );
+    })
+    """,
+    key="get_location"
+)
+
 # ---------- HAVERSINE ----------
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371000
@@ -358,3 +371,4 @@ if st.session_state.extreme_active:
         retry_box.empty()
         if st.session_state.extreme_active:
             st.rerun()
+
