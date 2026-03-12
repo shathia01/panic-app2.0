@@ -22,7 +22,7 @@ SUPABASE_URL = "https://zmuqoeihfkzlqzrfkvee.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InptdXFvZWloZmt6bHF6cmZrdmVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyMzk2MDUsImV4cCI6MjA4ODgxNTYwNX0.AiHQHI1fTnV09Xf2hJb_LB0Hu4cSD9StsAnY1PmNqX8"
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-APP_URL = "https://shathia-panic-app-hitoigbvsxtzbr28mbuzga.streamlit.app/"
+APP_URL = "https://shathia-panic-app.streamlit.app/"
 
 # ===================================================================
 # ---------- GUARDIAN PAGE DETECTION ----------
@@ -1222,3 +1222,4 @@ if st.session_state.extreme_active:
         retry_box.empty()
         if st.session_state.extreme_active:
             st.rerun()
+
